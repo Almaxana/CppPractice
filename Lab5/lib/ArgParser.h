@@ -237,7 +237,7 @@ namespace ArgumentParser {
 
 
     class ArgParser {
-    public:
+    private:
 
         std::string parserName;
 
@@ -249,7 +249,7 @@ namespace ArgumentParser {
         std::vector<FlagOption> fOptions;
         HelpOption* helpOption;
 
-
+    public:
         explicit ArgParser(const std::string& pName);
 
         ~ArgParser();
