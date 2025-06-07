@@ -6,11 +6,28 @@
 
 namespace ArgumentParser {
 
-    class ArgParseException {
+    int getChIndex(std::vector<char>& v, char ch);
+    bool isStrExist(std::vector<std::string>& v, const std::string& str);
+
+    template <typename OptionContainer>
+    int getIndex(const OptionContainer& v, const std::string& lName) {
+        for (int i = 0; i < v.size(); i++)
+            if (v[i].longName == lName) return i;
+        return -1;
+    }
+
+    template <typename OptionContainer>
+    int getIndexShort(const OptionContainer& v, const char sName) {
+        for (int i = 0; i < v.size(); i++)
+            if (v[i].shortName == sName) return i;
+        return -1;
+    }
+
+    class ArgParseException : public std::exception {
     public:
         std::string message;
 
-        ArgParseException(const std::string& msg);
+        explicit ArgParseException(const std::string& msg);
     };
 
 
@@ -55,7 +72,14 @@ namespace ArgumentParser {
         bool isValSaved;
         bool isPositional;
 
-        SpecialOption() : Option(){}
+        SpecialOption() : Option(),
+                          defValueSet(false),
+                          multiValue(false),
+                          minArgsCount(-1),
+                          valueRef(&value),
+                          isOutsideRef(false),
+                          isValSaved(false),
+                          isPositional(false) {}
 
         SpecialOption(const SpecialOption& specialOption) : Option(specialOption.shortName, specialOption.longName, specialOption.description),
                                                             defValueSet(specialOption.defValueSet),
@@ -65,7 +89,8 @@ namespace ArgumentParser {
                                                             value(specialOption.value),
                                                             values(specialOption.values),
                                                             isOutsideRef(specialOption.isOutsideRef),
-                                                            isValSaved(specialOption.isValSaved)
+                                                            isValSaved(specialOption.isValSaved),
+                                                            isPositional(false)
         {
             if (isOutsideRef) {
                 valueRef = specialOption.valueRef;
@@ -77,7 +102,7 @@ namespace ArgumentParser {
         }
 
 
-        explicit SpecialOption(const std::string& lName) : SpecialOption('\0', lName, ""){}
+        explicit SpecialOption(const std::string& lName) : SpecialOption('\0', lName, "") {}
         SpecialOption(const char sName, const std::string& lName) : SpecialOption(sName, lName, ""){}
         SpecialOption(const std::string& lName, const std::string& desc) : SpecialOption('\0', lName, desc){}
         SpecialOption(const char sName, const std::string& lName, const std::string& desc) : Option(sName, lName, desc),
@@ -91,7 +116,8 @@ namespace ArgumentParser {
 
         bool isOptionFilled() {
             if (multiValue) {
-                return valueRefs->size() >= minArgsCount;
+                if (valueRefs != nullptr) return valueRefs->size() >= minArgsCount;
+                return values.size() >= minArgsCount;
             } else {
                 if (isValSaved) return true;
                 if (defValueSet) return true;
@@ -174,7 +200,7 @@ namespace ArgumentParser {
 
     class StringOption : public SpecialOption<std::string>{
     public:
-        explicit StringOption(const StringOption& so) : SpecialOption<std::string>(so){}
+        StringOption(const StringOption& so) : SpecialOption<std::string>(so){}
         StringOption() : SpecialOption<std::string>(){}
         explicit StringOption(const std::string& lName) : SpecialOption<std::string>(lName){}
         StringOption(const char sName, const std::string& lName) : SpecialOption<std::string>(sName, lName){}
@@ -186,11 +212,12 @@ namespace ArgumentParser {
 
     class IntOption : public SpecialOption<int>{
     public:
-        explicit IntOption(const IntOption& io) : SpecialOption<int>(io){}
+        IntOption(const IntOption& io) : SpecialOption<int>(io){}
         IntOption() : SpecialOption<int>(){}
         explicit IntOption(const std::string& lName) : SpecialOption<int>(lName){}
         IntOption(const char sName, const std::string& lName) : SpecialOption<int>(sName, lName){}
         IntOption(const std::string& lName, const std::string& desc) : SpecialOption<int>(lName, desc){}
+        IntOption(const char sName, const std::string& lName, const std::string& desc) : SpecialOption<int>(sName, lName, desc){}
 
         std::string getOptionDescription() override;
     };
@@ -198,7 +225,7 @@ namespace ArgumentParser {
 
     class FlagOption : public SpecialOption<bool>{
     public:
-        explicit FlagOption(const FlagOption& fo) : SpecialOption<bool>(fo){}
+        FlagOption(const FlagOption& fo) : SpecialOption<bool>(fo){}
         FlagOption() : SpecialOption<bool>(){}
         FlagOption(const char sName, const std::string& lName) : SpecialOption<bool>(sName, lName){}
         FlagOption(const std::string& lName, const std::string& desc) : SpecialOption<bool>(lName, desc){}
@@ -223,24 +250,25 @@ namespace ArgumentParser {
         HelpOption* helpOption;
 
 
-        ArgParser(const std::string& pName);
+        explicit ArgParser(const std::string& pName);
 
         ~ArgParser();
 
 
         StringOption& AddStringArgument(const std::string& lName);
-        StringOption& AddStringArgument(const char sName, const std::string& lName);
-        StringOption& AddStringArgument(const char sName, const std::string& lName, const std::string desc);
+        StringOption& AddStringArgument(char sName, const std::string& lName);
+        StringOption& AddStringArgument(char sName, const std::string& lName, const std::string& desc);
 
         IntOption& AddIntArgument(const std::string& lName);
         IntOption& AddIntArgument(const std::string& lName, const std::string& desc);
-        IntOption& AddIntArgument(const char sName, const std::string& lName);
+        IntOption& AddIntArgument(char sName, const std::string& lName);
+        IntOption& AddIntArgument(char sName, const std::string& lName, const std::string& desc);
 
-        FlagOption& AddFlag(const char sName, const std::string& lName);
+        FlagOption& AddFlag(char sName, const std::string& lName);
         FlagOption& AddFlag(const std::string& lName, const std::string& desc);
-        FlagOption& AddFlag(const char sName, const std::string& lName, const std::string& desc);
+        FlagOption& AddFlag(char sName, const std::string& lName, const std::string& desc);
 
-        HelpOption& AddHelp(const char sName, const std::string& lName, const std::string& desc);
+        HelpOption& AddHelp(char sName, const std::string& lName, const std::string& desc);
 
 
         bool Parse(std::vector<std::string>);
@@ -249,56 +277,27 @@ namespace ArgumentParser {
 
         const std::string& GetStringValue(const std::string& lName);
         int GetIntValue(const std::string& lName);
-        int GetIntValue(const std::string& lName, const int index);
+        int GetIntValue(const std::string& lName, int index);
         bool GetFlag(const std::string& lName);
 
-        bool Help();
+        bool Help() const;
         std::string HelpDescription();
     };
 
-
-    int getSIndex(std::vector<StringOption>& v, const std::string& lName);
-    int getIIndex(std::vector<IntOption>& v, const std::string& lName);
-    int getFIndex(std::vector<FlagOption>& v, const std::string& lName);
-
-
-    int getSIndexShort(std::vector<StringOption>& v, const char sName);
-
-
-    int getIIndexShort(std::vector<IntOption>& v, const char sName);
-
-
-    int getFIndexShort(std::vector<FlagOption>& v, const char sName);
-
-
     int getPositionalIOptions(std::vector<IntOption>& v);
-
 
     int getPositionalIOptionIndex(std::vector<IntOption>& v);
 
-
     bool isShortOptionVal(std::string_view str, char& sName, std::string& value);
-
 
     bool isLongOptionVal(std::string_view str, std::string& lName,
                          std::string& value);
 
-
     bool isLongOption(std::string_view str, std::string& lName);
-
 
     bool isShortFlagsOption(std::string_view str, std::string& sFNames);
 
-
-    bool isStrExist(std::vector<std::string>& v, const std::string& str);
-
-
-    int getChIndex(std::vector<char>& v, const char ch);
-
-
     bool isOption(std::string_view str);
 
-
     bool parseInt(const std::string& str, int& num);
-
 }

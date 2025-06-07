@@ -3,12 +3,11 @@
 #include<iostream>
 #include<string>
 #include<vector>
-#include<sstream>
 #include<string_view>
 
 namespace ArgumentParser {
 
-    ArgParseException::ArgParseException(const std::string& msg) {
+    ArgParseException::ArgParseException(const std::string& msg){
         message = msg;
     }
 
@@ -85,6 +84,7 @@ namespace ArgumentParser {
         return true;
     }
 
+
     bool parseInt(const std::string& str, int& num) {
 
         std::istringstream in(str);
@@ -101,54 +101,10 @@ namespace ArgumentParser {
     }
 
 
-    int getSIndex(std::vector<StringOption>& v, const std::string& lName) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].longName == lName) return i;
-        return -1;
-    }
-
-
-    int getIIndex(std::vector<IntOption>& v, const std::string& lName) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].longName == lName) return i;
-        return -1;
-    }
-
-
-    int getFIndex(std::vector<FlagOption>& v, const std::string& lName) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].longName == lName) return i;
-        return -1;
-    }
-
-
-    int getSIndexShort(std::vector<StringOption>& v, const char sName) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].shortName == sName) return i;
-        return -1;
-    }
-
-
-    int getIIndexShort(std::vector<IntOption>& v, const char sName) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].shortName == sName) return i;
-
-        return -1;
-    }
-
-
-    int getFIndexShort(std::vector<FlagOption>& v, const char sName) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].shortName == sName) return i;
-
-        return -1;
-    }
-
-
     int getPositionalIOptions(std::vector<IntOption>& v) {
         int count = 0;
-        for (int i = 0; i < v.size(); i++)
-            if (v[i].isPositional) count++;
+        for (auto & i : v)
+            if (i.isPositional) count++;
 
         return count;
     }
@@ -162,14 +118,12 @@ namespace ArgumentParser {
     }
 
 
-
     bool isStrExist(std::vector<std::string>& v, const std::string& str) {
-        for (int i = 0; i < v.size(); i++)
-            if (v[i] == str) return true;
+        for (const auto & i : v)
+            if (i == str) return true;
 
         return false;
     }
-
 
 
     int getChIndex(std::vector<char>& v, const char ch) {
@@ -178,6 +132,7 @@ namespace ArgumentParser {
 
         return -1;
     }
+
 
     bool isShortOptionVal(std::string_view str, char& sName, std::string& value) {
 
@@ -200,6 +155,7 @@ namespace ArgumentParser {
         return true;
     }
 
+
     bool isLongOptionVal(std::string_view str, std::string& lName, std::string& value) {
 
         if (!isOption(str)) return false;
@@ -210,12 +166,13 @@ namespace ArgumentParser {
         if (eqPos == std::string::npos) return false;
 
         lName = str.substr(2, eqPos - 2);
-        if (lName.size() < 1) return false;
+        if (lName.empty()) return false;
 
         value = str.substr(eqPos + 1);
 
         return true;
     }
+
 
     bool isLongOption(std::string_view str, std::string& lName) {
 
@@ -227,6 +184,7 @@ namespace ArgumentParser {
         return true;
     }
 
+
     bool isShortFlagsOption(std::string_view str, std::string& sFNames) {
 
         if (!isOption(str)) return false;
@@ -234,56 +192,27 @@ namespace ArgumentParser {
         return true;
     }
 
+
     ArgParser::ArgParser(const std::string& pName) {
         parserName = pName;
         helpOption = nullptr;
     }
 
     ArgParser::~ArgParser() {
-        if (helpOption != nullptr) delete helpOption;
+        delete helpOption;
     }
 
+
     StringOption& ArgParser::AddStringArgument(const std::string& lName) {
-
-        if (isStrExist(longArgNames, lName)) {
-
-            std::ostringstream out;
-            out << "Two options with long name '" << lName << "'";
-            throw ArgParseException(out.str());
-        }
-        sOptions.emplace_back(lName);
-
-        longArgNames.push_back(lName);
-
-        return sOptions[getSIndex(sOptions, lName)];
+        return AddStringArgument('\0', lName, "");
     }
 
     StringOption& ArgParser::AddStringArgument(const char sName, const std::string& lName) {
-
-        if (getChIndex(shortArgNames, sName) != -1) {
-            std::ostringstream out;
-            out << "Two options with short name '" << sName << "'";
-            throw ArgParseException(out.str());
-        }
-
-        if (isStrExist(longArgNames, lName)) {
-            std::ostringstream out;
-            out << "Two options with long name '" << lName << "'";
-            throw ArgParseException(out.str());
-        }
-
-        sOptions.emplace_back(sName, lName);
-
-        shortArgNames.push_back(sName);
-
-        longArgNames.push_back(lName);
-
-        return sOptions[getSIndex(sOptions, lName)];
+        return AddStringArgument(sName, lName, "");
     }
 
-    StringOption& ArgParser::AddStringArgument(const char sName, const std::string& lName, const std::string desc) {
-
-        if (getChIndex(shortArgNames, sName) != -1) {
+    StringOption& ArgParser::AddStringArgument(const char sName, const std::string& lName, const std::string& desc) {
+        if (sName != '\0' && getChIndex(shortArgNames, sName) != -1) {
             std::ostringstream out;
             out << "Two options with short name '" << sName << "'";
             throw ArgParseException(out.str());
@@ -295,113 +224,55 @@ namespace ArgumentParser {
             throw ArgParseException(out.str());
         }
 
-        StringOption newOption(sName, lName, desc);
-        sOptions.push_back(newOption);
+        sOptions.emplace_back(sName, lName, desc);
 
-        shortArgNames.push_back(sName);
-
+        if (sName != '\0') shortArgNames.push_back(sName);
         longArgNames.push_back(lName);
 
-        return sOptions[getSIndex(sOptions, lName)];
+        return sOptions[getIndex(sOptions, lName)];
     }
 
 
     IntOption& ArgParser::AddIntArgument(const std::string& lName) {
-
-        if (isStrExist(longArgNames, lName)) {
-            std::ostringstream out;
-            out << "Two options with long name '" << lName << "'";
-            throw ArgParseException(out.str());
-        }
-
-        iOptions.emplace_back(lName);
-
-        longArgNames.push_back(lName);
-
-        return iOptions[getIIndex(iOptions, lName)];
+        return AddIntArgument('\0', lName, "");
     }
 
     IntOption& ArgParser::AddIntArgument(const std::string& lName, const std::string& desc) {
-
-        if (isStrExist(longArgNames, lName)) {
-            std::ostringstream out;
-            out << "Two options with long name '" << lName << "'";
-            throw ArgParseException(out.str());
-        }
-
-
-        iOptions.emplace_back(lName, desc);
-
-        longArgNames.push_back(lName);
-
-        return iOptions[getIIndex(iOptions, lName)];
+        return AddIntArgument('\0', lName, desc);
     }
 
     IntOption& ArgParser::AddIntArgument(const char sName, const std::string& lName) {
+        return AddIntArgument(sName, lName, "");
+    }
 
-        if (getChIndex(shortArgNames, sName) != -1) {
-
+    IntOption& ArgParser::AddIntArgument(const char sName, const std::string& lName, const std::string& desc) {
+        if (sName != '\0' && getChIndex(shortArgNames, sName) != -1) {
             std::ostringstream out;
             out << "Two options with short name '" << sName << "'";
-
             throw ArgParseException(out.str());
         }
 
         if (isStrExist(longArgNames, lName)) {
-
             std::ostringstream out;
             out << "Two options with long name '" << lName << "'";
-
             throw ArgParseException(out.str());
         }
 
-        iOptions.emplace_back(sName, lName);;
+        iOptions.emplace_back(sName, lName, desc);
 
-        shortArgNames.push_back(sName);
-
+        if (sName != '\0') shortArgNames.push_back(sName);
         longArgNames.push_back(lName);
 
-        return iOptions[getIIndex(iOptions, lName)];
+        return iOptions[getIndex(iOptions, lName)];
     }
 
 
     FlagOption& ArgParser::AddFlag(const char sName, const std::string& lName) {
-
-        if (getChIndex(shortArgNames, sName) != -1) {
-            std::ostringstream out;
-            out << "Two options with short name '" << sName << "'";
-            throw ArgParseException(out.str());
-        }
-
-        if (isStrExist(longArgNames, lName)) {
-            std::ostringstream out;
-            out << "Two options with long name '" << lName << "'";
-            throw ArgParseException(out.str());
-        }
-
-        fOptions.emplace_back(sName, lName);
-
-        shortArgNames.push_back(sName);
-
-        longArgNames.push_back(lName);
-
-        return fOptions[getFIndex(fOptions, lName)];
+        return AddFlag(sName, lName, "");
     }
 
     FlagOption& ArgParser::AddFlag(const std::string& lName, const std::string& desc) {
-
-        if (isStrExist(longArgNames, lName)) {
-            std::ostringstream out;
-            out << "Two options with long name '" << lName << "'";
-            throw ArgParseException(out.str());
-        }
-
-
-        fOptions.emplace_back(lName, desc);
-
-        longArgNames.push_back(lName);
-
-        return fOptions[getFIndex(fOptions, lName)];
+        return AddFlag('\0', lName, desc);
     }
 
     FlagOption& ArgParser::AddFlag(const char sName, const std::string& lName, const std::string& desc) {
@@ -422,12 +293,12 @@ namespace ArgumentParser {
 
         fOptions.emplace_back(sName, lName, desc);
 
-        shortArgNames.push_back(sName);
-
+        if (sName != '\0') shortArgNames.push_back(sName);
         longArgNames.push_back(lName);
 
-        return fOptions[getFIndex(fOptions, lName)];
+        return fOptions[getIndex(fOptions, lName)];
     }
+
 
     HelpOption& ArgParser::AddHelp(const char sName, const std::string& lName, const std::string& desc) {
 
@@ -452,14 +323,14 @@ namespace ArgumentParser {
         helpOption = new HelpOption(sName, lName, desc);
 
         shortArgNames.push_back(sName);
-
         longArgNames.push_back(lName);
 
         return *helpOption;
     }
 
+
     bool ArgParser::Parse(std::vector<std::string> v) {
-        int n = v.size();
+        size_t n = v.size();
         if (n < 1) return false;
 
         if (getPositionalIOptions(iOptions) > 1) {
@@ -487,7 +358,7 @@ namespace ArgumentParser {
 
             if (!parseInt(curArg, num)) {
                 if (isLongOptionVal(curArg, lName, value)) {
-                    optIndex = getSIndex(sOptions, lName);
+                    optIndex = getIndex(sOptions, lName);
 
                     if (optIndex != -1) {
                         if (!sOptions[optIndex].addValue(value)) return false;
@@ -496,7 +367,7 @@ namespace ArgumentParser {
                         continue;
                     }
 
-                    optIndex = getIIndex(iOptions, lName);
+                    optIndex = getIndex(iOptions, lName);
 
                     if (optIndex != -1) {
                         if (!parseInt(value, num)) return false;
@@ -510,7 +381,7 @@ namespace ArgumentParser {
                 }
             }
             if (isShortOptionVal(curArg, sName, value)) {
-                optIndex = getSIndexShort(sOptions, sName);
+                optIndex = getIndexShort(sOptions, sName);
 
                 if (optIndex != -1) {
                     if (!sOptions[optIndex].addValue(value)) return false;
@@ -519,7 +390,7 @@ namespace ArgumentParser {
                     continue;
                 }
 
-                optIndex = getIIndexShort(iOptions, sName);
+                optIndex = getIndexShort(iOptions, sName);
 
                 if (optIndex != -1) {
                     if (!parseInt(value, num)) return false;
@@ -533,7 +404,7 @@ namespace ArgumentParser {
             }
 
             if (isLongOption(curArg, lName)) {
-                optIndex = getFIndex(fOptions, lName);
+                optIndex = getIndex(fOptions, lName);
 
                 if (optIndex != -1) {
                     if (!fOptions[optIndex].setTrueValue()) return false;
@@ -552,10 +423,8 @@ namespace ArgumentParser {
             }
 
             if (isShortFlagsOption(curArg, sFNames)) {
-                for (int i = 0; i < sFNames.size(); i++) {
-                    char sName = sFNames[i];
-
-                    optIndex = getFIndexShort(fOptions, sName);
+                for (char sName : sFNames) {
+                    optIndex = getIndexShort(fOptions, sName);
 
                     if (optIndex != -1) {
                         if (!fOptions[optIndex].setTrueValue()) return false;
@@ -579,26 +448,28 @@ namespace ArgumentParser {
         }
 
 
-        for (int i = 0; i < sOptions.size(); i++) {
-            if (!sOptions[i].isOptionFilled()) return false;
+        for (auto& sOption : sOptions) {
+            if (!sOption.isOptionFilled()) return false;
         }
 
-        for (int i = 0; i < iOptions.size(); i++) {
-            if (!iOptions[i].isOptionFilled()) return false;
+        for (auto& iOption : iOptions) {
+            if (!iOption.isOptionFilled()) return false;
         }
         return true;
     }
 
+
     bool ArgParser::Parse(int argc, char* argv[]) {
         std::vector<std::string> v;
         for (int i = 0; i < argc; i++)
-            v.push_back(argv[i]);
+            v.emplace_back(argv[i]);
 
         return ArgParser::Parse(v);
     }
 
+
     const std::string& ArgParser::GetStringValue(const std::string& lName) {
-        int index = getSIndex(sOptions, lName);
+        int index = getIndex(sOptions, lName);
 
         if (index == -1) {
             std::ostringstream out;
@@ -626,8 +497,9 @@ namespace ArgumentParser {
         return *option.valueRef;
     }
 
+
     int ArgParser::GetIntValue(const std::string& lName) {
-        int index = getIIndex(iOptions, lName);
+        int index = getIndex(iOptions, lName);
 
         if (index == -1) {
             std::ostringstream out;
@@ -654,8 +526,9 @@ namespace ArgumentParser {
         return option.value;
     }
 
+
     int ArgParser::GetIntValue(const std::string& lName, const int vIndex) {
-        int index = getIIndex(iOptions, lName);
+        int index = getIndex(iOptions, lName);
 
         if (index == -1) {
             std::ostringstream out;
@@ -692,7 +565,7 @@ namespace ArgumentParser {
     }
 
     bool ArgParser::GetFlag(const std::string& lName) {
-        int index = getFIndex(fOptions, lName);
+        int index = getIndex(fOptions, lName);
 
         if (index == -1) {
             std::ostringstream out;
@@ -717,7 +590,7 @@ namespace ArgumentParser {
         return option.valueRef;
     }
 
-    bool ArgParser::Help() {
+    bool ArgParser::Help() const {
         if (helpOption == nullptr) {
             std::ostringstream out;
             out << "Parser has no help option";
@@ -732,18 +605,18 @@ namespace ArgumentParser {
 
         out << parserName << std::endl;
 
-        if ((helpOption != nullptr) && (helpOption->description.size() > 0))
+        if ((helpOption != nullptr) && (!helpOption->description.empty()))
             out << helpOption->description << std::endl;
         out << std::endl;
 
-        for (int i = 0; i < sOptions.size(); i++)
-            out << sOptions[i].getOptionDescription() << std::endl;
+        for (auto& sOption : sOptions)
+            out << sOption.getOptionDescription() << std::endl;
 
-        for (int i = 0; i < fOptions.size(); i++)
-            out << fOptions[i].getOptionDescription() << std::endl;
+        for (auto& fOption : fOptions)
+            out << fOption.getOptionDescription() << std::endl;
 
-        for (int i = 0; i < iOptions.size(); i++)
-            out << iOptions[i].getOptionDescription() << std::endl;
+        for (auto& iOption : iOptions)
+            out << iOption.getOptionDescription() << std::endl;
         out << std::endl;
 
         if (helpOption != nullptr)
@@ -751,4 +624,4 @@ namespace ArgumentParser {
 
         return out.str();
     }
-};
+}
