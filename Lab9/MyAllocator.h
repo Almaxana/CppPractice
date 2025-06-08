@@ -15,13 +15,10 @@ public:
     Chunk* body;
     Chunk* available;
 
-    Pool (size_t pool_size_, size_t chunk_size_) {
-
-        pool_size = pool_size_;
-        chunk_size = chunk_size_;
+    Pool(size_t pool_size_, size_t chunk_size_) :  pool_size(pool_size_), chunk_size(chunk_size_) {
         body = static_cast<Chunk*>(malloc(pool_size_));
         if (body == nullptr) {
-            std::cout<<"malloc returned NULL\n";
+            std::cout << "malloc returned NULL\n";
             throw std::bad_alloc();
         }
 
@@ -36,12 +33,10 @@ public:
     }
 
 
-    Pool (const Pool& other_p) {
-        pool_size = other_p.pool_size;
-        chunk_size = other_p.chunk_size;
+    Pool(const Pool& other_p) : pool_size(other_p.pool_size), chunk_size(other_p.chunk_size) {
         body = static_cast<Chunk*> (malloc(other_p.pool_size));
         if (body == nullptr) {
-            std::cout<<"malloc returned NULL copying  "<<&other_p<<"\n";
+            std::cout << "malloc returned NULL copying  " << &other_p << "\n";
             throw std::bad_alloc();
         }
         memcpy(body, other_p.body, pool_size);
@@ -57,7 +52,6 @@ public:
 
         }
         chunk->next = nullptr;
-
     }
 
     Pool() = default;
@@ -71,20 +65,15 @@ public:
 template <typename T>
 class PoolAllocator {
 public:
-
     using value_type = T;
     std::vector<Pool> pools;
 
     explicit PoolAllocator(std::vector<Pool>& vec) {
         pools.shrink_to_fit();
-        for (size_t i = 0; i < vec.size(); ++i) {
-            pools.push_back(vec[i]);
+        for (const auto & i : vec) {
+            pools.push_back(i);
         }
     }
-
-    PoolAllocator() = default;
-
-    ~PoolAllocator() = default;
 
     template<typename Tp>
     explicit PoolAllocator(const PoolAllocator<Tp>& other_al) {
@@ -99,16 +88,22 @@ public:
         }
     }
 
+    PoolAllocator() = default;
+
+    ~PoolAllocator() = default;
+
 
     friend bool operator==(const PoolAllocator& lhs, const PoolAllocator& rhs) {
 
         return &lhs == &rhs;
     }
 
+    
     friend bool operator!=(const PoolAllocator& lhs, const PoolAllocator& rhs) {
 
         return !(lhs == rhs);
     }
+
 
     T* allocate(size_t size) {
         for (auto& pool : pools) {
