@@ -15,7 +15,7 @@ struct S {
     std::vector<std::string> values;
 
     S() = default;
-    S(const std::string type_) : type(type_){}
+    S(const std::string& type_) : type(type_){}
     ~S() = default;
 
 
@@ -32,21 +32,21 @@ public:
 
     void Insert(std::ostream& out, const std::string& destination_table, std::vector<std::string>& keys, std::vector<std::string>& values_);
 
-    void Update(const std::string& destination_table, std::vector<std::string>& keys, std::vector<std::string>& values_, std::shared_ptr<Node> Where);
+    void Update(const std::string& destination_table, std::vector<std::string>& keys, std::vector<std::string>& values_, const std::shared_ptr<Node>& Where);
 
-    void Delete(const std::string& destination_table, std::shared_ptr<Node> Where);
+    void Delete(const std::string& destination_table, const std::shared_ptr<Node>& Where);
 
     void SelectFrom(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns);
 
-    void SelectFromWhere(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Where);
+    void SelectFromWhere(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Where);
 
-    void SelectFromInnerJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Join,
+    void SelectFromInnerJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Join,
                              const std::string& tableName1, const std::string& tableName2);
 
-    void SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Join,
+    void SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Join,
                             const std::string& tableName1, const std::string& tableName2);
 
-    void SelectFromRightJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Join,
+    void SelectFromRightJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Join,
                              const std::string& tableName1, const std::string& tableName2);
 
 

@@ -1,12 +1,9 @@
-#pragma once
-
 #include "ParserSQL.h"
 #include "Options.h"
 
 #include<variant>
 #include<sstream>
 
-std::pair<std::string, std::string> GetTableAndKey(const std::string& node_str);
 
 std::variant<int, bool, float, double, std::string> GetValue(const std::string& str, const std::string& type) {
     std::istringstream iss(str);
@@ -27,7 +24,6 @@ std::variant<int, bool, float, double, std::string> GetValue(const std::string& 
         return str;
     }
 
-
     return str;
 }
 
@@ -36,7 +32,7 @@ std::string ReadWordFromBegin(std::string& s, bool only_one_word) {
     std::string word = "";
     while (s[i] != ' '  && i != s.length()) {
         if (only_one_word && s[i] == ',') break;
-        word = word + s[i];
+        word += s[i];
         ++i;
     }
     if (i != s.length() && s[i] == ',') ++i;
@@ -50,12 +46,12 @@ std::string ReadWordFromBegin(std::string& s, bool only_one_word) {
 std::string ReadBeforeComma(std::string& s) {
     size_t i = 0;
     std::string str = "";
-    while (s[i] != '\0' && s[i] != ','/* && s[i] != ')'*/) {
-        str = str + s[i];
+    while (s[i] != '\0' && s[i] != ',') {
+        str += s[i];
         ++i;
     }
 
-    while (i != s.length() && (s[i] == ','/* || s[i] == ')'*/)) {
+    while (i != s.length() && (s[i] == ',')) {
         ++i;
     }
 
@@ -76,8 +72,8 @@ bool Parse(std::ostream& out, std::string request, MyCoolBD& bd) {
             if (word != "*") {
                 std::pair<std::string, std::string> table_key = GetTableAndKey(word);
                 if (table_key.second == "*") {
-                    for (std::string key : bd.GetTableKeys(table_key.first)) {
-                        keys.push_back({table_key.first, key});
+                    for (const std::string& key : bd.GetTableKeys(table_key.first)) {
+                        keys.emplace_back(table_key.first, key);
                     }
                 } else keys.push_back(table_key);
             } else {
@@ -88,7 +84,7 @@ bool Parse(std::ostream& out, std::string request, MyCoolBD& bd) {
 
         std::vector<std::string> tableNames;
         word = ReadWordFromBegin(request, true);
-        while (request != "" && word != "WHERE" && word != "INNER" && word != "LEFT" && word != "RIGHT") {
+        while (!request.empty() && word != "WHERE" && word != "INNER" && word != "LEFT" && word != "RIGHT") {
             tableNames.push_back(word);
             word = ReadWordFromBegin(request, true);
         }
@@ -96,21 +92,21 @@ bool Parse(std::ostream& out, std::string request, MyCoolBD& bd) {
 
         if (flag_for_all) {
             for (std::string& tableName : tableNames) {
-                for (std::string key : bd.GetTableKeys(tableName)) {
-                    keys.push_back({tableName, key});
+                for (const std::string& key : bd.GetTableKeys(tableName)) {
+                    keys.emplace_back(tableName, key);
                 }
             }
         }
 
 
-        if (request == "") {
+        if (request.empty()) {
             bd.SelectFrom(out, keys);
             return true;
         } else if (word == "WHERE") {
             std::shared_ptr<Node> parserRoot = ParserTree(request, bd);
             bd.SelectFromWhere(out, keys, parserRoot);
         } else {/// [...] JOIN
-            std::string join_type = word;
+            const std::string& join_type = word;
             ReadWordFromBegin(request, true);///JOIN
             std::string second_table = ReadWordFromBegin(request, true);
             ReadWordFromBegin(request, true);///ON
@@ -197,9 +193,9 @@ bool Parse(std::ostream& out, std::string request, MyCoolBD& bd) {
         std::string str;
 
 
-        while (request != "") {
+        while (!request.empty()) {
             str = ReadBeforeComma(request);
-            if (str == "") break;
+            if (str.empty()) break;
             word = ReadWordFromBegin(str, true);
             if (word == "FOREIGN_KEY") {
                 std::string key1 = ReadWordFromBegin(str, true);
@@ -213,7 +209,7 @@ bool Parse(std::ostream& out, std::string request, MyCoolBD& bd) {
             key = word;
             type = ReadWordFromBegin(str, true);
 
-            if (str == "") {
+            if (str.empty()) {
                 keys.insert({key, std::make_tuple(type, false, std::make_pair("", ""))});
             } else {
                 ReadWordFromBegin(str, true);///PRIMARY_KEY

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "ParserTree.h"
 #include "Options.h"
 

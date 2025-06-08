@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Options.h"
 #include "ParserTree.h"
 
@@ -30,11 +28,11 @@ void MyCoolBD::CreateTable(const std::string& tableName_, std::map<std::string, 
 
 void MyCoolBD::Insert(std::ostream& out, const std::string& destination_table, std::vector<std::string>& keys,  std::vector<std::string>& values_) {
     for (auto& column : BD[destination_table]) {
-        column.second.values.push_back("NULL");
+        column.second.values.emplace_back("NULL");
     }
     for (size_t i = 0; i < keys.size(); ++i) {
         if (BD[destination_table][keys[i]].is_primary_key) {
-            for (auto it : BD[destination_table][keys[i]].values) {
+            for (const auto& it : BD[destination_table][keys[i]].values) {
                 if (it == values_[i]) {
                     out<<"Cannot INSERT. Uniqueness of PK failed\n\n\n";
                     for (auto& column : BD[destination_table]) {
@@ -51,7 +49,7 @@ void MyCoolBD::Insert(std::ostream& out, const std::string& destination_table, s
     table_sizes[destination_table]++;
 }
 
-void MyCoolBD::Update(const std::string& destination_table, std::vector<std::string>& keys,  std::vector<std::string>& values_, std::shared_ptr<Node> Where) {
+void MyCoolBD::Update(const std::string& destination_table, std::vector<std::string>& keys,  std::vector<std::string>& values_, const std::shared_ptr<Node>& Where) {
     for (size_t i = 0; i < table_sizes[destination_table]; ++i) {
         if (accept(Where, *this, i)) {
             for (size_t j = 0; j < keys. size(); ++j) {
@@ -62,7 +60,7 @@ void MyCoolBD::Update(const std::string& destination_table, std::vector<std::str
     }
 }
 
-void MyCoolBD::Delete(const std::string& destination_table, std::shared_ptr<Node> Where) {
+void MyCoolBD::Delete(const std::string& destination_table, const std::shared_ptr<Node>& Where) {
     uint64_t new_table_size = table_sizes[destination_table];
     for (int64_t i = table_sizes[destination_table] - 1; i >=0; --i) {
         if (accept(Where, *this, i)) {
@@ -79,13 +77,13 @@ void MyCoolBD::Delete(const std::string& destination_table, std::shared_ptr<Node
 
 void MyCoolBD::SelectFrom(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns) {
     size_t rows_number = 0;
-    for (auto key : what_columns) {
+    for (const auto& key : what_columns) {
         rows_number = std::max(rows_number, table_sizes[key.first]);
         out<<std::setw(13)<<std::left<<key.second;
     }
     out<<"\n";
     for (size_t i = 0; i < rows_number; ++i) {
-        for (auto key : what_columns) {
+        for (const auto& key : what_columns) {
             if (i >= BD[key.first][key.second].values.size()) out<<std::setw(13)<<std::left<<"NULL";
             else out<<std::setw(13)<<std::left<<BD[key.first][key.second].values[i];
         }
@@ -93,9 +91,9 @@ void MyCoolBD::SelectFrom(std::ostream& out, std::vector<std::pair<std::string, 
     }
 }
 
-void MyCoolBD::SelectFromWhere(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Where) {
+void MyCoolBD::SelectFromWhere(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Where) {
     size_t rows_number = 0;
-    for (auto key : what_columns) {
+    for (const auto& key : what_columns) {
         rows_number = std::max(rows_number, table_sizes[key.first]);
         out<<std::setw(10)<<std::left<<key.second<<" ";
     }
@@ -103,7 +101,7 @@ void MyCoolBD::SelectFromWhere(std::ostream& out, std::vector<std::pair<std::str
 
     for (size_t i = 0; i < rows_number; ++i) {
         if (accept(Where, *this, i)) {
-            for (auto key : what_columns) {
+            for (const auto& key : what_columns) {
                 if (i >= BD[key.first][key.second].values.size()) out<<std::setw(10)<<std::left<<"NULL";
                 out<<std::setw(10)<<std::left<<BD[key.first][key.second].values[i];
             }
@@ -114,9 +112,9 @@ void MyCoolBD::SelectFromWhere(std::ostream& out, std::vector<std::pair<std::str
 }
 
 void MyCoolBD::SelectFromInnerJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns,
-                                   std::shared_ptr<Node> Join, const std::string& tableName1, const std::string& tableName2) {
+                                   const std::shared_ptr<Node>& Join, const std::string& tableName1, const std::string& tableName2) {
 
-    for (auto key : what_columns) {
+    for (const auto& key : what_columns) {
         out<<std::setw(10)<<std::left<<key.second;
     }
     out<<"\n";
@@ -124,7 +122,7 @@ void MyCoolBD::SelectFromInnerJoin(std::ostream& out, std::vector<std::pair<std:
     for (size_t i = 0; i < table_sizes[tableName1]; ++i) {
         for (size_t j = 0; j < table_sizes[tableName2]; ++j) {
             if (acceptForTwoRows(Join, *this, i, j, tableName1, tableName2)) {
-                for (auto key : what_columns) {
+                for (const auto& key : what_columns) {
                     size_t index;
                     if (key.first == tableName1) index = i;
                     else index = j;
@@ -137,10 +135,10 @@ void MyCoolBD::SelectFromInnerJoin(std::ostream& out, std::vector<std::pair<std:
 
 }
 
-void MyCoolBD::SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Join,
+void MyCoolBD::SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Join,
                                   const std::string& tableName1, const std::string& tableName2) {
 
-    for (auto key : what_columns) {
+    for (const auto& key : what_columns) {
         out<<std::setw(10)<<std::left<<key.second;
     }
     out<<"\n";
@@ -150,7 +148,7 @@ void MyCoolBD::SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::
         for (size_t j = 0; j < table_sizes[tableName2]; ++j) {
             if (acceptForTwoRows(Join, *this, i, j, tableName1, tableName2)) {
                 find_accept = true;
-                for (auto key : what_columns) {
+                for (const auto& key : what_columns) {
                     size_t index;
                     if (key.first == tableName1) index = i;
                     else index = j;
@@ -161,7 +159,7 @@ void MyCoolBD::SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::
 
         }
         if (!find_accept) {
-            for (auto key : what_columns) {
+            for (const auto& key : what_columns) {
                 if (key.first == tableName1) out<<std::setw(10)<<std::left<<BD[key.first][key.second].values[i];
                 else out<<std::setw(10)<<std::left<<"NULL";
 
@@ -172,13 +170,13 @@ void MyCoolBD::SelectFromLeftJoin(std::ostream& out, std::vector<std::pair<std::
 
 }
 
-void MyCoolBD::SelectFromRightJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, std::shared_ptr<Node> Join,
+void MyCoolBD::SelectFromRightJoin(std::ostream& out, std::vector<std::pair<std::string, std::string>>& what_columns, const std::shared_ptr<Node>& Join,
                                    const std::string& tableName1, const std::string& tableName2) {
     SelectFromLeftJoin(out, what_columns, Join, tableName2, tableName1);
 }
 
 void MyCoolBD::Print(std::ostream& out, const std::string& tableName) {
-    for (auto str : BD[tableName]) {
+    for (const auto& str : BD[tableName]) {
         out<<std::setw(10)<<std::left<<str.first<<" ";
     }
     out<<"\n";
@@ -197,7 +195,7 @@ void MyCoolBD::DropTable(const std::string& tableName_) {
 
 std::vector<std::string> MyCoolBD::GetTableKeys(const std::string& tableName) {
     std::vector<std::string> table_keys;
-    for (auto key : BD[tableName]) {
+    for (const auto& key : BD[tableName]) {
         table_keys.push_back(key.first);
     }
     return table_keys;
@@ -211,12 +209,12 @@ void MyCoolBD::SaveIntoFile( const std::string& path) {
         return;
     }
 
-    for (auto table : BD) {
+    for (const auto& table : BD) {
         std::string tableName = table.first;
 
         out<<"CREATE TABLE "<<tableName<<" (";
         size_t j = 0;
-        for (auto key : BD[tableName]) {
+        for (const auto& key : BD[tableName]) {
             if (j != 0) out<<",";
             out<<" "<<key.first<<" "<<key.second.type;
             ++j;
@@ -226,12 +224,12 @@ void MyCoolBD::SaveIntoFile( const std::string& path) {
 
         std::string insert_template = "INSERT INTO " + tableName + " ( ";
         j = 0;
-        for (auto column : BD[tableName]) {
-            if (j != 0) insert_template = insert_template + ",";
-            insert_template = insert_template + column.first + " ";
+        for (const auto& column : BD[tableName]) {
+            if (j != 0) insert_template += ",";
+            insert_template += column.first + " ";
             ++j;
         }
-        insert_template = insert_template + ") VALUES (";
+        insert_template += ") VALUES (";
 
         for (size_t i = 0; i < table_sizes[tableName]; ++i) {
             j = 0;
